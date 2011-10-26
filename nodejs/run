@@ -1,0 +1,46 @@
+#!/bin/sh
+
+echo "Generating Hummingbird config (config/config.js)..."
+cat >config/config.js <<EOF
+module.exports = config = {
+  "name" : "Hummingbird",
+
+  "tracking_port" : $PORT_TRACKING,
+  "ws_port" : $PORT_WS,
+  "dashboard_port" : $PORT_DASHBOARD,
+
+  "mongo_host" : "$DOTCLOUD_DB_MONGODB_HOST",
+  "mongo_port" : $DOTCLOUD_DB_MONGODB_PORT,
+
+  "udp_address" : "127.0.0.1",
+  "udp_port" : 8000,
+
+  "enable_dashboard" : true
+}
+EOF
+
+echo "Patching public/index.html..."
+sed -i 's,http://localhost:8000,,g' public/index.html
+
+if [ -f GeoLiteCity.dat ]
+then
+	echo "GeoLiteCity.dat found."
+else
+	echo "GeoLiteCity.dat not found. Installing."
+	wget http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz
+	gunzip GeoLiteCity.dat.gz
+fi
+
+echo "Installing socket.io.js and WebSocketMain.swf..."
+mkdir -p public/socket.io
+cp data/node_modules/socket.io/node_modules/socket.io-client/dist/socket.io.js public/socket.io
+cp data/node_modules/socket.io/node_modules/socket.io-client/dist/WebSocketMain.swf public/socket.io
+
+echo "Removing volatile emit..."
+sed -i 's/sockets.volatile.emit/sockets.emit/' lib/metric.js
+
+echo "Patching wsPortParam..."
+sed -i 's/return wsPortParam;/return wsPortParam[1];/' public/js/websocket.js
+
+echo "Starting Hummingbird..."
+exec node server.js

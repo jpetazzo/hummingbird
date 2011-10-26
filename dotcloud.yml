@@ -1,0 +1,14 @@
+www:
+  type: custom
+  buildscript: nodejs/builder
+  ports:
+    dashboard: tcp
+    tracking: http
+    ws: tcp
+  processes:
+    node: ~/run
+    socat: socat TCP4-LISTEN:$PORT_WS,reuseaddr,fork TCP4:127.0.0.1:$PORT_TRACKING
+
+db:
+  type: mongodb
+
